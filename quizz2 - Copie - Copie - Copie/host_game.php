@@ -3,24 +3,20 @@ require_once 'db.php';
 $quiz_id = $_GET['quiz_id'] ?? null;
 $current_pin = $_GET['pin'] ?? null;
 
+// ACTION : Création de la session JSON
 if (isset($_POST['start_session'])) {
     $pin = rand(100000, 999999);
     
-    // On définit le chemin vers le dossier sessions de manière ultra-stricte
+    // Chemin absolu vers le dossier sessions
     $chemin_dossier = __DIR__ . '/sessions';
     
-    // On force la création du dossier s'il n'existe pas
+    // Création du dossier s'il n'existe pas
     if (!is_dir($chemin_dossier)) { 
         mkdir($chemin_dossier, 0777, true); 
     }
-
-    // On vérifie que le dossier est bien accessible en écriture
-    if (!is_writable($chemin_dossier)) {
-        die("Erreur : Le dossier 'sessions' n'est pas accessible en écriture. Vérifiez les permissions sur Alwaysdata.");
-    }
     
-    // NOM DU FICHIER : On utilise le chemin complet
-    $fichier_partie = $chemin_dossier . '/game_' . $pin . '.json';
+    // NOM DU FICHIER : On utilise 'partie_' pour vérifier que le nouveau code est lu
+    $fichier_partie = $chemin_dossier . '/partie_' . $pin . '.json';
     
     $blank = [
         'players' => [], 
@@ -31,7 +27,6 @@ if (isset($_POST['start_session'])) {
         'last_update' => time()
     ];
     
-    // Écriture du fichier
     file_put_contents($fichier_partie, json_encode($blank));
     
     header("Location: host_game.php?pin=$pin&quiz_id=$quiz_id");
@@ -41,7 +36,8 @@ if (isset($_POST['start_session'])) {
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8"><script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
     <title>Salon - Bernard Quizz</title>
 </head>
 <body class="bg-indigo-600 min-h-screen text-white flex flex-col items-center p-10 font-sans">
@@ -82,8 +78,7 @@ if (isset($_POST['start_session'])) {
                                     <div class="relative w-16 h-16 mx-auto mb-3">
                                         <img src="personnage/tenue/tenue${p.outfit}.png" class="absolute inset-0 w-full h-full object-contain" style="z-index: 10;">
                                         <img src="personnage/cheveux/cheveux${p.hair}.png" class="absolute inset-0 w-full h-full object-contain" style="z-index: 20;">
-                                        ${aura}
-                                        ${badge}
+                                        ${aura}${badge}
                                     </div>
                                     <p class="truncate text-xs uppercase tracking-widest">${p.nickname}</p>
                                 </div>`;

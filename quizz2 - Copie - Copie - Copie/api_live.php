@@ -5,14 +5,28 @@ header('Content-Type: application/json');
 $action = $_GET['action'] ?? '';
 $pin = $_GET['pin'] ?? '';
 
-// CHEMIN ABSOLU : On pointe vers le dossier sessions
-$chemin_dossier = __DIR__ . '/sessions';
-$gameStateFile = $chemin_dossier . '/game_' . $pin . '.json';
+// On définit le dossier sessions de manière absolue
+$chemin_sessions = __DIR__ . '/sessions';
+
+// Création du dossier si absent (sécurité supplémentaire)
+if (!is_dir($chemin_sessions)) { 
+    mkdir($chemin_sessions, 0777, true); 
+}
+
+// On cible le préfixe "partie_" (notre marqueur de test) dans le dossier sessions
+$gameStateFile = $chemin_sessions . '/partie_' . $pin . '.json';
 
 if (file_exists($gameStateFile)) {
     $state = json_decode(file_get_contents($gameStateFile), true);
 } else {
-    $state = ['players' => [], 'scores' => new stdClass(), 'answers' => new stdClass(), 'status' => 'lobby', 'current_q_index' => -1, 'last_update' => time()];
+    $state = [
+        'players' => [], 
+        'scores' => new stdClass(), 
+        'answers' => new stdClass(), 
+        'status' => 'lobby', 
+        'current_q_index' => -1, 
+        'last_update' => time()
+    ];
 }
 
 switch ($action) {
@@ -83,7 +97,7 @@ switch ($action) {
 
     case 'next_step':
         $state['current_q_index']++;
-        if ($state['current_q_index'] < count($state['questions_list'])) {
+        if ($state['current_q_index'] < count($state['questions_list'] ?? [])) {
             $state['status'] = 'reveal';
             $state['question'] = $state['questions_list'][$state['current_q_index']];
         } else {
