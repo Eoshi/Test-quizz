@@ -6,20 +6,21 @@ $action = $_GET['action'] ?? '';
 $pin = $_GET['pin'] ?? '';
 $gameStateFile = "sessions/game_" . $pin . ".json";
 
-// Création du dossier si inexistant
 if (!is_dir('sessions')) { mkdir('sessions', 0755, true); }
 
 if (file_exists($gameStateFile)) {
     $state = json_decode(file_get_contents($gameStateFile), true);
 } else {
-    $state = ['players' => [], 'scores' => [], 'answers' => [], 'status' => 'lobby', 'current_q_index' => -1, 'last_update' => time()];
+    // INITIALISATION SÉCURISÉE EN OBJETS
+    $state = ['players' => [], 'scores' => new stdClass(), 'answers' => new stdClass(), 'status' => 'lobby', 'current_q_index' => -1, 'last_update' => time()];
 }
 
 switch ($action) {
     case 'join':
         $input = json_decode(file_get_contents('php://input'), true);
         $nick = htmlspecialchars($input['nickname'] ?? 'Anonyme');
-        if (!isset($state['scores'][$nick])) {
+        $scoresArr = (array)$state['scores'];
+        if (!isset($scoresArr[$nick])) {
             $state['players'][] = [
                 'nickname' => $nick,
                 'hair' => (int)($input['hair'] ?? 1),
@@ -27,7 +28,8 @@ switch ($action) {
                 'aura' => (int)($input['aura'] ?? 0),
                 'is_member' => (bool)($input['is_member'] ?? false)
             ];
-            $state['scores'][$nick] = 0;
+            $scoresArr[$nick] = 0;
+            $state['scores'] = (object)$scoresArr;
         }
         break;
 
@@ -41,10 +43,7 @@ switch ($action) {
         $state['questions_list'] = $qs;
         $state['current_q_index'] = 0;
         $state['question'] = $qs[0];
-        
-        // On prépare un objet vide pour chaque question pour éviter les bugs JS
-        $state['answers'] = [];
-        foreach ($qs as $k => $v) { $state['answers'][$k] = new stdClass(); }
+        $state['answers'] = new stdClass();
         break;
 
     case 'activate_playing':
@@ -55,23 +54,23 @@ switch ($action) {
         $input = json_decode(file_get_contents('php://input'), true);
         $nick = $input['nickname'] ?? '';
         $qIdx = (int)$state['current_q_index'];
+        
+        $allAnswers = (array)$state['answers'];
+        if (!isset($allAnswers[$qIdx])) { $allAnswers[$qIdx] = []; }
+        $currentQAnswers = (array)$allAnswers[$qIdx];
 
-        if ($nick && $qIdx >= 0) {
-            if (!isset($state['answers'][$qIdx])) { $state['answers'][$qIdx] = []; }
-            $currentAnswers = (array)$state['answers'][$qIdx];
+        if ($nick && !isset($currentQAnswers[$nick])) {
+            $currentQAnswers[$nick] = $input['answer_index'];
+            $allAnswers[$qIdx] = (object)$currentQAnswers;
+            $state['answers'] = (object)$allAnswers;
 
-            // Si le joueur n'a pas encore répondu à cette question
-            if (!isset($currentAnswers[$nick])) {
-                $currentAnswers[$nick] = $input['answer_index'];
-                $state['answers'][$qIdx] = $currentAnswers;
-
-                // Forcer la lecture en Booléen (Vrai/Faux)
-                $isCorrect = filter_var($input['is_correct'], FILTER_VALIDATE_BOOLEAN);
-                if ($isCorrect) {
-                    $timeTaken = (float)($input['response_time'] ?? 0);
-                    $pts = max(500, 1000 - (int)($timeTaken * 50));
-                    $state['scores'][$nick] += $pts;
-                }
+            if ($input['is_correct'] == true) {
+                $timeTaken = (float)($input['response_time'] ?? 0);
+                $pts = max(500, 1000 - (int)($timeTaken * 50));
+                
+                $scoresArr = (array)$state['scores'];
+                $scoresArr[$nick] += $pts;
+                $state['scores'] = (object)$scoresArr;
             }
         }
         break;
@@ -95,7 +94,6 @@ switch ($action) {
         exit;
 }
 
-// Mise à jour du timestamp pour forcer le rafraîchissement des écrans
 $state['last_update'] = time();
 file_put_contents($gameStateFile, json_encode($state));
 echo json_encode(['status' => 'success']);
