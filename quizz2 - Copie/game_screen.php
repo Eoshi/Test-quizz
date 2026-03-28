@@ -17,7 +17,7 @@
     </div>
 
     <div id="finish-area" class="hidden flex-grow flex flex-col items-center justify-center p-10 text-center">
-        <h2 class="text-5xl font-black mb-10 italic uppercase">C'est la fin !</h2>
+        <h2 class="text-5xl font-black mb-10 italic uppercase tracking-tighter">Partie Finie !</h2>
         <a href="index.php" class="bg-white text-indigo-900 px-12 py-4 rounded-full font-black text-2xl shadow-2xl">RETOUR</a>
     </div>
 
@@ -26,7 +26,7 @@
         const nick = localStorage.getItem('quiz_nickname');
         document.getElementById('status-bar').innerText = nick;
 
-        let lastQId = null; 
+        let lastQIndex = -1; 
         let currentCorrectAns = 1;
         let answered = false; 
         let startTime = 0;
@@ -34,9 +34,8 @@
         function sync() {
             fetch(`api_live.php?action=get_state&pin=${pin}`).then(r => r.json()).then(data => {
                 if (data.status === 'playing') {
-                    // Si on détecte une nouvelle question par son texte ou son ID
-                    if (lastQId !== data.question.id) {
-                        lastQId = data.question.id;
+                    if (lastQIndex !== data.current_q_index) {
+                        lastQIndex = data.current_q_index;
                         currentCorrectAns = data.question.correct_answer;
                         answered = false;
                         document.getElementById('grid').classList.add('hidden');
@@ -51,7 +50,6 @@
                         }, 2000);
                     }
                 } else if (data.status === 'leaderboard') {
-                    lastQId = null; // On réinitialise pour la prochaine question
                     document.getElementById('grid').classList.add('hidden');
                     document.getElementById('msg').innerText = "Regardez le Maître !";
                 } else if (data.status === 'finished') {
