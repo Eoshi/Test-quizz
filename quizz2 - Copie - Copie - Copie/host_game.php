@@ -7,16 +7,16 @@ $current_pin = $_GET['pin'] ?? null;
 if (isset($_POST['start_session'])) {
     $pin = rand(100000, 999999);
     
-    // Chemin absolu vers le dossier sessions
+    // Chemin absolu vers le dossier sessions situé dans www
     $chemin_dossier = __DIR__ . '/sessions';
     
-    // Création du dossier s'il n'existe pas
+    // Création du dossier sessions s'il n'existe pas encore
     if (!is_dir($chemin_dossier)) { 
         mkdir($chemin_dossier, 0777, true); 
     }
     
-    // NOM DU FICHIER : On utilise 'partie_' pour vérifier que le nouveau code est lu
-    $fichier_partie = $chemin_dossier . '/partie_' . $pin . '.json';
+    // NOM DU FICHIER : On le place explicitement dans le sous-dossier sessions/
+    $fichier_partie = $chemin_dossier . '/game_' . $pin . '.json';
     
     $blank = [
         'players' => [], 
@@ -27,6 +27,7 @@ if (isset($_POST['start_session'])) {
         'last_update' => time()
     ];
     
+    // On écrit le fichier JSON dans www/sessions/
     file_put_contents($fichier_partie, json_encode($blank));
     
     header("Location: host_game.php?pin=$pin&quiz_id=$quiz_id");
@@ -64,6 +65,7 @@ if (isset($_POST['start_session'])) {
 
         <script>
             function refresh() {
+                // On interroge api_live.php qui est aussi à la racine www/
                 fetch(`api_live.php?action=get_state&pin=<?= $current_pin ?>`)
                 .then(r => r.json()).then(data => {
                     const list = document.getElementById('list');

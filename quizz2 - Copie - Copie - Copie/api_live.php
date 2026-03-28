@@ -8,13 +8,13 @@ $pin = $_GET['pin'] ?? '';
 // On définit le dossier sessions de manière absolue
 $chemin_sessions = __DIR__ . '/sessions';
 
-// Création du dossier si absent (sécurité supplémentaire)
+// Création du dossier sessions si absent
 if (!is_dir($chemin_sessions)) { 
     mkdir($chemin_sessions, 0777, true); 
 }
 
-// On cible le préfixe "partie_" (notre marqueur de test) dans le dossier sessions
-$gameStateFile = $chemin_sessions . '/partie_' . $pin . '.json';
+// On cherche le fichier game_XXXX.json DANS le dossier sessions/
+$gameStateFile = $chemin_sessions . '/game_' . $pin . '.json';
 
 if (file_exists($gameStateFile)) {
     $state = json_decode(file_get_contents($gameStateFile), true);
