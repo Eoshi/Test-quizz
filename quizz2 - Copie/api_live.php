@@ -37,7 +37,7 @@ switch ($action) {
         $state['questions_list'] = $qs;
         $state['current_q_index'] = 0;
         $state['question'] = $qs[0];
-        $state['answers'] = array_fill(0, count($qs), (object)[]); // Utilisation d'objets
+        $state['answers'] = array_fill(0, count($qs), new stdClass());
         break;
 
     case 'activate_playing':
@@ -49,14 +49,13 @@ switch ($action) {
         $nick = $input['nickname'];
         $qIdx = (int)$state['current_q_index'];
         
-        // On s'assure que la structure existe
-        if (!isset($state['answers'][$qIdx])) { $state['answers'][$qIdx] = (object)[]; }
-        
-        // On enregistre si le joueur n'a pas encore répondu
-        $ansObj = (array)$state['answers'][$qIdx];
-        if (!isset($ansObj[$nick])) {
-            $ansObj[$nick] = $input['answer_index'];
-            $state['answers'][$qIdx] = (object)$ansObj;
+        // On s'assure que answers[qIdx] est un tableau associatif
+        if (!isset($state['answers'][$qIdx])) { $state['answers'][$qIdx] = []; }
+        $currentAnswers = (array)$state['answers'][$qIdx];
+
+        if (!isset($currentAnswers[$nick])) {
+            $currentAnswers[$nick] = $input['answer_index'];
+            $state['answers'][$qIdx] = $currentAnswers;
 
             if ($input['is_correct'] == true) {
                 $pts = max(500, 1000 - (int)($input['response_time'] * 50));
