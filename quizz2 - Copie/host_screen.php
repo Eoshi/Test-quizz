@@ -27,7 +27,7 @@
         </div>
         <div class="flex items-center justify-around py-4 bg-indigo-900 border-t border-indigo-500 z-20">
             <div id="timer" class="text-6xl font-black bg-white text-indigo-700 w-28 h-28 rounded-full flex items-center justify-center border-4 border-indigo-300 shadow-2xl">0</div>
-            <div class="text-center"><p id="ans-count" class="text-7xl font-black text-yellow-400">0</p><p class="text-sm font-bold opacity-70 uppercase">Réponses</p></div>
+            <div class="text-center"><p id="ans-count" class="text-7xl font-black text-yellow-400">0</p><p class="text-sm font-bold opacity-70 uppercase tracking-widest">Réponses</p></div>
         </div>
         <div class="grid grid-cols-2 gap-2 p-2 h-1/4">
             <div class="bg-red-500 rounded-xl p-4 text-2xl font-bold flex items-center shadow-lg">▲ <span id="opt1" class="ml-4"></span></div>
@@ -47,6 +47,7 @@
             <div id="rank-1" class="podium-step flex flex-col items-center"><div id="av-1" class="mb-2 winner-dark"></div><div class="bg-yellow-400 w-40 h-56 rounded-t-xl flex items-center justify-center font-black text-7xl text-yellow-700 shadow-2xl border-t-8 border-yellow-200">1</div></div>
             <div id="rank-3" class="podium-step flex flex-col items-center"><div id="av-3" class="mb-2"></div><div class="bg-orange-600 w-32 h-24 rounded-t-xl flex items-center justify-center font-black text-5xl text-orange-800 shadow-2xl">3</div></div>
         </div>
+
         <div class="flex gap-4 mt-12 z-20">
             <button id="next-btn" onclick="nextStep()" class="bg-green-500 text-white px-14 py-5 rounded-full font-black text-2xl shadow-2xl hover:bg-green-400 transition transform hover:scale-105">SUIVANT</button>
             <a id="home-btn" href="dashboard.php" class="hidden bg-white text-indigo-900 px-14 py-5 rounded-full font-black text-2xl shadow-2xl hover:bg-gray-100 transition">QUITTER</a>
@@ -55,34 +56,49 @@
 
     <script>
         const pin = "<?= $_GET['pin'] ?>";
-        let localStatus = ""; let currentQIdx = -1; let timerInterval; let answeredList = [];
+        let localStatus = ""; 
+        let currentQIdx = -1; 
+        let timerInterval; 
+        let answeredList = [];
 
         function renderAv(p, s="w-16 h-16") {
-            // Fallback si p est manquant
+            // SÉCURITÉ : Si p n'existe pas, on met des valeurs par défaut
             if(!p) p = { hair: 1, outfit: 1, aura: 0, is_member: false };
-            let aura = (p.aura && p.aura > 0) ? `<img src="personnage/aura/aura${p.aura}.png" class="absolute inset-[-15%] w-[130%] h-[130%] object-contain pointer-events-none" style="z-index: 30;">` : '';
+            
+            // AURA FORCÉE À NE PAS TOURNER (!important en CSS inline)
+            let aura = (p.aura && p.aura > 0) ? `<img src="personnage/aura/aura${p.aura}.png" class="absolute inset-[-15%] w-[130%] h-[130%] object-contain pointer-events-none" style="z-index: 30; transform: none !important; animation: none !important;">` : '';
             let badge = p.is_member ? `<div class="absolute -bottom-2 -right-2 bg-yellow-400 text-black text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-white" style="z-index: 40;">★</div>` : '';
-            return `<div class="relative ${s} mx-auto"><img src="personnage/tenue/tenue${p.outfit}.png" class="absolute inset-0 w-full h-full object-contain" style="z-index: 10;"><img src="personnage/cheveux/cheveux${p.hair}.png" class="absolute inset-0 w-full h-full object-contain" style="z-index: 20;">${aura}${badge}</div>`;
+            
+            return `<div class="relative ${s} mx-auto">
+                <img src="personnage/tenue/tenue${p.outfit}.png" class="absolute inset-0 w-full h-full object-contain" style="z-index: 10;">
+                <img src="personnage/cheveux/cheveux${p.hair}.png" class="absolute inset-0 w-full h-full object-contain" style="z-index: 20;">
+                ${aura}
+                ${badge}
+            </div>`;
         }
 
         function update() {
             fetch(`api_live.php?action=get_state&pin=${pin}`).then(r => r.json()).then(data => {
                 if (data.status !== localStatus || data.current_q_index !== currentQIdx) {
-                    localStatus = data.status; currentQIdx = data.current_q_index;
+                    localStatus = data.status; 
+                    currentQIdx = data.current_q_index;
+                    
                     if (data.status === 'reveal') showReveal(data);
                     if (data.status === 'playing') showQuestion(data);
                     if (data.status === 'leaderboard') showLeaderboard(data);
                     if (data.status === 'finished') startFinalPodium(data);
                 }
+                
                 if (data.status === 'playing') {
                     const answers = data.answers[data.current_q_index] || {};
                     const nicks = Object.keys(answers);
                     document.getElementById('ans-count').innerText = nicks.length;
+                    
                     const classroom = document.getElementById('classroom');
                     nicks.forEach(n => {
                         if(!answeredList.includes(n)) {
-                            // Securité anti-crash
-                            const p = data.players.find(x => x.nickname === n) || { nickname: n, hair: 1, outfit: 1, aura: 0 };
+                            // Recherche sécurisée du joueur
+                            const p = data.players.find(x => x.nickname === n) || { nickname: n, hair: 1, outfit: 1, aura: 0, is_member: false };
                             classroom.innerHTML += `<div class="text-center p-2">${renderAv(p, "w-14 h-14")}<p class="text-[10px] font-bold mt-2 uppercase tracking-wide">${p.nickname}</p></div>`;
                             answeredList.push(n);
                         }
@@ -103,17 +119,29 @@
             document.getElementById('reveal-ui').classList.add('hidden');
             document.getElementById('question-ui').classList.remove('hidden');
             document.getElementById('q-text').innerText = data.question.question_text;
+            
             const imgBox = document.getElementById('img-box');
             if(data.question.image_url && data.question.image_url.trim() !== "") {
-                document.getElementById('q-img').src = data.question.image_url; imgBox.classList.remove('hidden');
+                document.getElementById('q-img').src = data.question.image_url;
+                imgBox.classList.remove('hidden');
             } else { imgBox.classList.add('hidden'); }
-            document.getElementById('opt1').innerText = data.question.opt1; document.getElementById('opt2').innerText = data.question.opt2; document.getElementById('opt3').innerText = data.question.opt3; document.getElementById('opt4').innerText = data.question.opt4;
-            answeredList = []; document.getElementById('classroom').innerHTML = "";
+
+            document.getElementById('opt1').innerText = data.question.opt1;
+            document.getElementById('opt2').innerText = data.question.opt2;
+            document.getElementById('opt3').innerText = data.question.opt3;
+            document.getElementById('opt4').innerText = data.question.opt4;
+            
+            answeredList = []; 
+            document.getElementById('classroom').innerHTML = "";
+            
             clearInterval(timerInterval);
             let timerVal = parseInt(data.question.timer);
             timerInterval = setInterval(() => {
                 document.getElementById('timer').innerText = timerVal;
-                if (timerVal <= 0) { clearInterval(timerInterval); fetch(`api_live.php?action=show_leaderboard&pin=${pin}`); }
+                if (timerVal <= 0) { 
+                    clearInterval(timerInterval); 
+                    fetch(`api_live.php?action=show_leaderboard&pin=${pin}`); 
+                }
                 timerVal--;
             }, 1000);
         }
@@ -124,10 +152,9 @@
             const list = document.getElementById('score-list');
             list.innerHTML = "";
             
-            // Securité : S'il n'y a pas de scores, data.scores peut être vide
             const scores = data.scores || {};
             Object.entries(scores).sort((a,b) => b[1]-a[1]).slice(0,5).forEach(([nick, pts]) => {
-                const p = data.players.find(x => x.nickname === nick) || { nickname: nick, hair: 1, outfit: 1, aura: 0 };
+                const p = data.players.find(x => x.nickname === nick) || { nickname: nick, hair: 1, outfit: 1, aura: 0, is_member: false };
                 list.innerHTML += `<div class="bg-indigo-800 p-4 rounded-2xl flex justify-between items-center border-l-8 border-yellow-400 shadow-md">
                     <div class="flex items-center gap-6">${renderAv(p, "w-12 h-12")} <span class="font-bold uppercase text-lg tracking-wider">${nick}</span></div>
                     <span class="text-3xl font-black text-yellow-300">${pts} pts</span></div>`;
@@ -147,25 +174,27 @@
             const losers = sorted.slice(3);
 
             losers.forEach((l, i) => {
-                const p = data.players.find(x => x.nickname === l[0]) || { nickname: l[0], hair: 1, outfit: 1, aura: 0 };
+                const p = data.players.find(x => x.nickname === l[0]) || { nickname: l[0], hair: 1, outfit: 1, aura: 0, is_member: false };
                 const div = document.createElement('div');
-                div.className = "falling-player"; div.style.left = (Math.random()*80+10)+"%"; div.style.animationDelay = (i * 0.2) + "s";
+                div.className = "falling-player"; 
+                div.style.left = (Math.random()*80+10)+"%";
+                div.style.animationDelay = (i * 0.2) + "s";
                 div.innerHTML = renderAv(p, "w-16 h-16");
                 document.getElementById('falling-zone').appendChild(div);
             });
 
             if(top3[2]) {
-                const p3 = data.players.find(x => x.nickname === top3[2][0]) || { nickname: top3[2][0], hair: 1, outfit: 1, aura: 0 };
+                const p3 = data.players.find(x => x.nickname === top3[2][0]) || { nickname: top3[2][0], hair: 1, outfit: 1, aura: 0, is_member: false };
                 document.getElementById('av-3').innerHTML = renderAv(p3, "w-24 h-24");
                 setTimeout(() => document.getElementById('rank-3').classList.add('podium-visible'), 1000);
             }
             if(top3[1]) {
-                const p2 = data.players.find(x => x.nickname === top3[1][0]) || { nickname: top3[1][0], hair: 1, outfit: 1, aura: 0 };
+                const p2 = data.players.find(x => x.nickname === top3[1][0]) || { nickname: top3[1][0], hair: 1, outfit: 1, aura: 0, is_member: false };
                 document.getElementById('av-2').innerHTML = renderAv(p2, "w-24 h-24");
                 setTimeout(() => document.getElementById('rank-2').classList.add('podium-visible'), 3000);
             }
             if(top3[0]) {
-                const p1 = data.players.find(x => x.nickname === top3[0][0]) || { nickname: top3[0][0], hair: 1, outfit: 1, aura: 0 };
+                const p1 = data.players.find(x => x.nickname === top3[0][0]) || { nickname: top3[0][0], hair: 1, outfit: 1, aura: 0, is_member: false };
                 const av1 = document.getElementById('av-1');
                 av1.innerHTML = renderAv(p1, "w-32 h-32");
                 setTimeout(() => {

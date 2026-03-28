@@ -5,11 +5,19 @@ $current_pin = $_GET['pin'] ?? null;
 
 if (isset($_POST['start_session'])) {
     $pin = rand(100000, 999999);
-    if (!is_dir('sessions')) { mkdir('sessions', 0755, true); }
-    $f = "sessions/game_" . $pin . ".json";
-    // scores et answers forcés en objets pour éviter les bugs
+    
+    // Chemin absolu forcé
+    $chemin_dossier = __DIR__ . '/sessions';
+    if (!is_dir($chemin_dossier)) { 
+        mkdir($chemin_dossier, 0777, true); 
+    }
+    
+    $fichier_partie = $chemin_dossier . '/game_' . $pin . '.json';
+    
     $blank = ['players' => [], 'scores' => new stdClass(), 'answers' => new stdClass(), 'status' => 'lobby', 'current_q_index' => -1, 'last_update' => time()];
-    file_put_contents($f, json_encode($blank));
+    
+    file_put_contents($fichier_partie, json_encode($blank));
+    
     header("Location: host_game.php?pin=$pin&quiz_id=$quiz_id");
     exit;
 }
@@ -46,8 +54,7 @@ if (isset($_POST['start_session'])) {
                     list.innerHTML = "";
                     if(data.players && data.players.length > 0) {
                         data.players.forEach(p => {
-                            // Affichage de l'Aura Statique au premier plan
-                            let aura = (p.aura && p.aura > 0) ? `<img src="personnage/aura/aura${p.aura}.png" class="absolute inset-[-15%] w-[130%] h-[130%] object-contain" style="z-index: 30;">` : '';
+                            let aura = (p.aura && p.aura > 0) ? `<img src="personnage/aura/aura${p.aura}.png" class="absolute inset-[-15%] w-[130%] h-[130%] object-contain pointer-events-none" style="z-index: 30; transform: none !important; animation: none !important;">` : '';
                             let badge = p.is_member ? `<div class="absolute -bottom-2 -right-2 bg-yellow-400 text-black text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-white" style="z-index: 40;">★</div>` : '';
                             
                             list.innerHTML += `

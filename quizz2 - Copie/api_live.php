@@ -4,14 +4,18 @@ header('Content-Type: application/json');
 
 $action = $_GET['action'] ?? '';
 $pin = $_GET['pin'] ?? '';
-$gameStateFile = "sessions/game_" . $pin . ".json";
 
-if (!is_dir('sessions')) { mkdir('sessions', 0755, true); }
+// Chemin absolu forcé dès le départ
+$chemin_dossier = __DIR__ . '/sessions';
+if (!is_dir($chemin_dossier)) { 
+    mkdir($chemin_dossier, 0777, true); 
+}
+
+$gameStateFile = $chemin_dossier . '/game_' . $pin . '.json';
 
 if (file_exists($gameStateFile)) {
     $state = json_decode(file_get_contents($gameStateFile), true);
 } else {
-    // INITIALISATION SÉCURISÉE EN OBJETS
     $state = ['players' => [], 'scores' => new stdClass(), 'answers' => new stdClass(), 'status' => 'lobby', 'current_q_index' => -1, 'last_update' => time()];
 }
 
@@ -19,6 +23,7 @@ switch ($action) {
     case 'join':
         $input = json_decode(file_get_contents('php://input'), true);
         $nick = htmlspecialchars($input['nickname'] ?? 'Anonyme');
+        
         $scoresArr = (array)$state['scores'];
         if (!isset($scoresArr[$nick])) {
             $state['players'][] = [
@@ -64,12 +69,13 @@ switch ($action) {
             $allAnswers[$qIdx] = (object)$currentQAnswers;
             $state['answers'] = (object)$allAnswers;
 
-            if ($input['is_correct'] == true) {
+            $isCorrect = filter_var($input['is_correct'], FILTER_VALIDATE_BOOLEAN);
+            if ($isCorrect) {
                 $timeTaken = (float)($input['response_time'] ?? 0);
                 $pts = max(500, 1000 - (int)($timeTaken * 50));
                 
                 $scoresArr = (array)$state['scores'];
-                $scoresArr[$nick] += $pts;
+                $scoresArr[$nick] = ($scoresArr[$nick] ?? 0) + $pts;
                 $state['scores'] = (object)$scoresArr;
             }
         }

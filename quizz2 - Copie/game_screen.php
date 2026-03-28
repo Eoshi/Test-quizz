@@ -55,7 +55,7 @@
             fetch(`api_live.php?action=get_state&pin=${pin}`)
             .then(r => r.json())
             .then(data => {
-                // PHASE REVEAL : On se prépare
+                // PHASE REVEAL : Zoom de la question sur l'écran du Maître
                 if (data.status === 'reveal') {
                     if(lastQIndex !== data.current_q_index) {
                         lastQIndex = data.current_q_index;
@@ -68,7 +68,7 @@
                     document.getElementById('msg').innerText = "CONCENTREZ-VOUS...";
                 } 
                 
-                // PHASE PLAYING : On affiche les boutons et le texte !
+                // PHASE PLAYING : Le chrono tourne, on affiche les boutons
                 else if (data.status === 'playing') {
                     if (!answered) {
                         document.getElementById('msg').classList.add('hidden');
@@ -82,14 +82,14 @@
                     }
                 } 
                 
-                // PHASE LEADERBOARD : En attente du Maître
+                // PHASE LEADERBOARD : Classement entre deux questions
                 else if (data.status === 'leaderboard') {
                     document.getElementById('grid').classList.add('hidden');
                     document.getElementById('msg').classList.remove('hidden');
                     document.getElementById('msg').innerText = "REGARDEZ LE MAÎTRE !";
                 }
 
-                // PHASE FINISHED : Le jeu est fini
+                // PHASE FINISHED : Le jeu est fini (Podium sur l'écran Maître)
                 else if (data.status === 'finished') {
                     document.getElementById('grid').classList.add('hidden');
                     document.getElementById('msg').classList.remove('hidden');
@@ -105,9 +105,9 @@
             answered = true;
 
             const responseTime = (Date.now() - startTime) / 1000;
+            // On vérifie localement si c'est juste, et on envoie l'info au serveur
             const isCorrect = (num == correctAnsId);
 
-            // ENVOI PROPRE EN JSON
             fetch(`api_live.php?action=submit_answer&pin=${pin}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

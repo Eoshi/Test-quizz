@@ -24,7 +24,7 @@ $is_vip = isset($_SESSION['user_id']);
         <div class="avatar-view mb-6">
             <img id="prev-outfit" src="personnage/tenue/tenue1.png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; z-index: 10;">
             <img id="prev-hair" src="personnage/cheveux/cheveux1.png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; z-index: 20;">
-            <img id="prev-aura" src="" class="hidden" style="position: absolute; inset: -15%; width: 130%; height: 130%; z-index: 30; pointer-events: none; object-fit: contain; transform: none; animation: none;">
+            <img id="prev-aura" src="" class="hidden" style="position: absolute; inset: -15%; width: 130%; height: 130%; z-index: 30; pointer-events: none; object-fit: contain; transform: none !important; animation: none !important;">
         </div>
 
         <input type="text" id="nick-input" placeholder="Ton Pseudo..." value="<?= htmlspecialchars($_SESSION['username'] ?? '') ?>" class="w-full p-3 border-2 rounded-xl mb-6 font-bold text-center outline-none focus:border-indigo-500">
@@ -33,18 +33,22 @@ $is_vip = isset($_SESSION['user_id']);
             <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Coupe</p>
             <div class="grid grid-cols-4 gap-2">
                 <?php for($i=1; $i<=4; $i++): ?>
-                    <button onclick="setHair(<?= $i ?>)" class="hair-btn bg-gray-100 rounded-lg p-1 border-2 border-transparent transition hover:bg-gray-200"><img src="personnage/cheveux/cheveux<?= $i ?>.png" class="h-10 mx-auto object-contain"></button>
+                    <button onclick="setHair(<?= $i ?>)" class="hair-btn bg-gray-100 rounded-lg p-1 border-2 border-transparent transition hover:bg-gray-200">
+                        <img src="personnage/cheveux/cheveux<?= $i ?>.png" class="h-10 mx-auto object-contain">
+                    </button>
                 <?php endfor; ?>
             </div>
 
             <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Tenue</p>
             <div class="grid grid-cols-5 gap-2">
                 <?php for($i=1; $i<=5; $i++): ?>
-                    <button onclick="setOutfit(<?= $i ?>)" class="outfit-btn bg-gray-100 rounded-lg p-1 border-2 border-transparent transition hover:bg-gray-200"><img src="personnage/tenue/tenue<?= $i ?>.png" class="h-10 mx-auto object-contain"></button>
+                    <button onclick="setOutfit(<?= $i ?>)" class="outfit-btn bg-gray-100 rounded-lg p-1 border-2 border-transparent transition hover:bg-gray-200">
+                        <img src="personnage/tenue/tenue<?= $i ?>.png" class="h-10 mx-auto object-contain">
+                    </button>
                 <?php endfor; ?>
             </div>
 
-            <p class="text-xs font-bold text-yellow-500 uppercase tracking-widest flex justify-between items-center">Aura de Membre <?= !$is_vip ? '<span>🔒</span>' : '' ?></p>
+            <p class="text-xs font-bold text-yellow-500 uppercase tracking-widest flex justify-between items-center">Aura VIP <?= !$is_vip ? '<span>🔒</span>' : '' ?></p>
             <div class="grid grid-cols-4 gap-2">
                 <button onclick="<?= $is_vip ? 'setAura(0)' : '' ?>" class="aura-btn bg-gray-100 rounded-lg p-2 border-2 <?= !$is_vip ? 'locked' : '' ?>">❌</button>
                 <?php for($i=1; $i<=3; $i++): ?>
@@ -74,6 +78,9 @@ $is_vip = isset($_SESSION['user_id']);
         function joinGame() {
             const nick = document.getElementById('nick-input').value;
             if(!nick) return alert("Choisis un pseudo !");
+            
+            localStorage.setItem('quiz_nickname', nick);
+
             fetch(`api_live.php?action=join&pin=${pin}`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ nickname: nick, hair: hIdx, outfit: oIdx, aura: aIdx, is_member: <?= $is_vip ? 'true' : 'false' ?> })
