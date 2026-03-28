@@ -9,16 +9,11 @@
     <div id="status-bar" class="p-4 bg-black bg-opacity-30 text-center font-bold italic"></div>
     <div id="msg" class="flex-grow flex items-center justify-center text-3xl font-black p-6 text-center italic">Attente...</div>
     
-    <div id="grid" class="hidden grid grid-cols-2 gap-3 p-3 h-2/3">
-        <button onclick="submitAnswer(1)" class="bg-red-500 rounded-2xl text-5xl shadow-xl active:scale-95 transition">▲</button>
-        <button onclick="submitAnswer(2)" class="bg-blue-500 rounded-2xl text-5xl shadow-xl active:scale-95 transition">◆</button>
-        <button onclick="submitAnswer(3)" class="bg-yellow-500 rounded-2xl text-5xl shadow-xl active:scale-95 transition">●</button>
-        <button onclick="submitAnswer(4)" class="bg-green-500 rounded-2xl text-5xl shadow-xl active:scale-95 transition">■</button>
-    </div>
-
-    <div id="finish-area" class="hidden flex-grow flex flex-col items-center justify-center p-10 text-center">
-        <h2 class="text-5xl font-black mb-10 italic uppercase tracking-tighter">Partie Finie !</h2>
-        <a href="index.php" class="bg-white text-indigo-900 px-12 py-4 rounded-full font-black text-2xl shadow-2xl">RETOUR</a>
+    <div id="grid" class="hidden grid grid-cols-1 gap-2 p-2 h-4/5">
+        <button onclick="submitAnswer(1)" class="bg-red-500 rounded-xl text-xl font-bold p-4 shadow-xl active:scale-95 transition flex items-center"><span class="mr-4 text-3xl">▲</span> <span id="txt1"></span></button>
+        <button onclick="submitAnswer(2)" class="bg-blue-500 rounded-xl text-xl font-bold p-4 shadow-xl active:scale-95 transition flex items-center"><span class="mr-4 text-3xl">◆</span> <span id="txt2"></span></button>
+        <button onclick="submitAnswer(3)" class="bg-yellow-500 rounded-xl text-xl font-bold p-4 shadow-xl active:scale-95 transition flex items-center"><span class="mr-4 text-3xl">●</span> <span id="txt3"></span></button>
+        <button onclick="submitAnswer(4)" class="bg-green-500 rounded-xl text-xl font-bold p-4 shadow-xl active:scale-95 transition flex items-center"><span class="mr-4 text-3xl">■</span> <span id="txt4"></span></button>
     </div>
 
     <script>
@@ -26,36 +21,29 @@
         const nick = localStorage.getItem('quiz_nickname');
         document.getElementById('status-bar').innerText = nick;
 
-        let lastQIndex = -1; 
-        let currentCorrectAns = 1;
-        let answered = false; 
-        let startTime = 0;
+        let lastQId = null; let currentCorrectAns = 1; let answered = false; let startTime = 0;
 
         function sync() {
             fetch(`api_live.php?action=get_state&pin=${pin}`).then(r => r.json()).then(data => {
-                if (data.status === 'playing') {
-                    if (lastQIndex !== data.current_q_index) {
-                        lastQIndex = data.current_q_index;
-                        currentCorrectAns = data.question.correct_answer;
-                        answered = false;
-                        document.getElementById('grid').classList.add('hidden');
-                        document.getElementById('finish-area').classList.add('hidden');
-                        document.getElementById('msg').classList.remove('hidden');
-                        document.getElementById('msg').innerText = "Préparez-vous...";
-                        
-                        setTimeout(() => {
-                            document.getElementById('grid').classList.remove('hidden');
-                            document.getElementById('msg').innerText = "VITE !";
-                            startTime = Date.now();
-                        }, 2000);
+                if (data.status === 'reveal') {
+                    document.getElementById('grid').classList.add('hidden');
+                    document.getElementById('msg').innerText = "CONCENTREZ-VOUS...";
+                    lastQId = data.question.id;
+                    currentCorrectAns = data.question.correct_answer;
+                } else if (data.status === 'playing') {
+                    if(!answered) {
+                        document.getElementById('msg').innerText = "VITE !";
+                        document.getElementById('txt1').innerText = data.question.opt1;
+                        document.getElementById('txt2').innerText = data.question.opt2;
+                        document.getElementById('txt3').innerText = data.question.opt3;
+                        document.getElementById('txt4').innerText = data.question.opt4;
+                        document.getElementById('grid').classList.remove('hidden');
+                        if(startTime === 0) startTime = Date.now();
                     }
                 } else if (data.status === 'leaderboard') {
+                    answered = false; startTime = 0;
                     document.getElementById('grid').classList.add('hidden');
-                    document.getElementById('msg').innerText = "Regardez le Maître !";
-                } else if (data.status === 'finished') {
-                    document.getElementById('msg').classList.add('hidden');
-                    document.getElementById('grid').classList.add('hidden');
-                    document.getElementById('finish-area').classList.remove('hidden');
+                    document.getElementById('msg').innerText = "REGARDEZ LE MAÎTRE !";
                 }
             });
         }
@@ -65,15 +53,12 @@
             answered = true;
             const responseTime = (Date.now() - startTime) / 1000;
             const isCorrect = (num == currentCorrectAns);
-
             fetch(`api_live.php?action=submit_answer&pin=${pin}`, {
                 method: 'POST',
                 body: JSON.stringify({ nickname: nick, is_correct: isCorrect, response_time: responseTime, answer_index: num })
             });
-
             document.getElementById('grid').classList.add('hidden');
-            const funnyPhrases = ["Rapide ! Ta copine doit être triste...", "T'es lent, on dirait un papi...", "Flash McQueen !", "Calme-toi l'excité."];
-            document.getElementById('msg').innerText = funnyPhrases[Math.floor(Math.random()*funnyPhrases.length)];
+            document.getElementById('msg').innerText = "RÉPONSE ENVOYÉE !";
         }
         setInterval(sync, 1500);
     </script>

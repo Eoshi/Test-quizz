@@ -19,7 +19,13 @@ switch ($action) {
         $input = json_decode(file_get_contents('php://input'), true);
         $nick = htmlspecialchars($input['nickname'] ?? 'Anonyme');
         if (!isset($state['scores'][$nick])) {
-            $state['players'][] = ['nickname' => $nick, 'hair' => (int)($input['hair'] ?? 1), 'outfit' => (int)($input['outfit'] ?? 1)];
+            $state['players'][] = [
+                'nickname' => $nick,
+                'hair' => (int)($input['hair'] ?? 1),
+                'outfit' => (int)($input['outfit'] ?? 1),
+                'aura' => (int)($input['aura'] ?? 0),
+                'is_member' => (bool)($input['is_member'] ?? false)
+            ];
             $state['scores'][$nick] = 0;
             file_put_contents($gameStateFile, json_encode($state));
         }
@@ -34,7 +40,7 @@ switch ($action) {
         $stmt = $pdo->prepare("SELECT * FROM questions WHERE quiz_id = ? ORDER BY id ASC");
         $stmt->execute([$quiz_id]);
         $qs = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        $state['status'] = 'playing';
+        $state['status'] = 'reveal'; // ON COMMENCE PAR LE REVEAL
         $state['questions_list'] = $qs;
         $state['current_q_index'] = 0;
         $state['question'] = $qs[0];
@@ -64,11 +70,16 @@ switch ($action) {
     case 'next_step':
         $state['current_q_index']++;
         if ($state['current_q_index'] < count($state['questions_list'])) {
-            $state['status'] = 'playing';
+            $state['status'] = 'reveal'; // TOUJOURS REVEAL AVANT PLAYING
             $state['question'] = $state['questions_list'][$state['current_q_index']];
         } else {
             $state['status'] = 'finished';
         }
+        file_put_contents($gameStateFile, json_encode($state));
+        break;
+        
+    case 'activate_playing': // ACTION POUR PASSER DU ZOOM AU CHRONO
+        $state['status'] = 'playing';
         file_put_contents($gameStateFile, json_encode($state));
         break;
 }
