@@ -37,7 +37,7 @@ switch ($action) {
         $state['questions_list'] = $qs;
         $state['current_q_index'] = 0;
         $state['question'] = $qs[0];
-        $state['answers'] = array_fill(0, count($qs), []);
+        $state['answers'] = array_fill(0, count($qs), (object)[]); // Utilisation d'objets
         break;
 
     case 'activate_playing':
@@ -48,11 +48,16 @@ switch ($action) {
         $input = json_decode(file_get_contents('php://input'), true);
         $nick = $input['nickname'];
         $qIdx = (int)$state['current_q_index'];
-        // On initialise le tableau de réponses pour cette question si besoin
-        if (!isset($state['answers'][$qIdx])) { $state['answers'][$qIdx] = []; }
         
-        if (!isset($state['answers'][$qIdx][$nick])) {
-            $state['answers'][$qIdx][$nick] = $input['answer_index'];
+        // On s'assure que la structure existe
+        if (!isset($state['answers'][$qIdx])) { $state['answers'][$qIdx] = (object)[]; }
+        
+        // On enregistre si le joueur n'a pas encore répondu
+        $ansObj = (array)$state['answers'][$qIdx];
+        if (!isset($ansObj[$nick])) {
+            $ansObj[$nick] = $input['answer_index'];
+            $state['answers'][$qIdx] = (object)$ansObj;
+
             if ($input['is_correct'] == true) {
                 $pts = max(500, 1000 - (int)($input['response_time'] * 50));
                 $state['scores'][$nick] += $pts;

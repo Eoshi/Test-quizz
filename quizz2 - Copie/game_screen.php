@@ -5,27 +5,28 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <title>Bernard Quizz - Play</title>
 </head>
-<body class="bg-indigo-900 text-white font-sans flex flex-col h-screen overflow-hidden">
-    <div id="msg" class="flex-grow flex items-center justify-center text-3xl font-black text-center italic uppercase p-6">Concentrez-vous...</div>
+<body class="bg-indigo-900 text-white font-sans flex flex-col h-screen overflow-hidden p-4">
+    <div id="msg" class="flex-grow flex items-center justify-center text-3xl font-black text-center italic uppercase">Concentrez-vous...</div>
     
-    <div id="grid" class="hidden grid grid-cols-1 gap-2 p-2 h-4/5">
-        <button onclick="submitAns(1)" class="bg-red-500 rounded-xl p-4 text-xl font-bold flex items-center"><span class="text-3xl mr-4">▲</span><span id="txt1"></span></button>
-        <button onclick="submitAns(2)" class="bg-blue-500 rounded-xl p-4 text-xl font-bold flex items-center"><span class="text-3xl mr-4">◆</span><span id="txt2"></span></button>
-        <button onclick="submitAns(3)" class="bg-yellow-500 rounded-xl p-4 text-xl font-bold flex items-center"><span class="text-3xl mr-4">●</span><span id="txt3"></span></button>
-        <button onclick="submitAns(4)" class="bg-green-500 rounded-xl p-4 text-xl font-bold flex items-center"><span class="text-3xl mr-4">■</span><span id="txt4"></span></button>
+    <div id="grid" class="hidden grid grid-cols-1 gap-2 h-3/4">
+        <button onclick="submitAns(1)" class="bg-red-500 rounded-xl p-4 text-xl font-bold flex items-center shadow-lg"><span class="text-3xl mr-4">▲</span><span id="txt1"></span></button>
+        <button onclick="submitAns(2)" class="bg-blue-500 rounded-xl p-4 text-xl font-bold flex items-center shadow-lg"><span class="text-3xl mr-4">◆</span><span id="txt2"></span></button>
+        <button onclick="submitAns(3)" class="bg-yellow-500 rounded-xl p-4 text-xl font-bold flex items-center shadow-lg"><span class="text-3xl mr-4">●</span><span id="txt3"></span></button>
+        <button onclick="submitAns(4)" class="bg-green-500 rounded-xl p-4 text-xl font-bold flex items-center shadow-lg"><span class="text-3xl mr-4">■</span><span id="txt4"></span></button>
     </div>
 
     <script>
         const pin = new URLSearchParams(window.location.search).get('pin');
         const nick = localStorage.getItem('quiz_nickname');
-        let answered = false, currentQId = null, start = 0, correctAns = 1;
+        let answered = false, lastIdx = -1, start = 0, correct = 1;
 
         function sync() {
             fetch(`api_live.php?action=get_state&pin=${pin}`).then(r => r.json()).then(data => {
                 if (data.status === 'reveal') {
-                    answered = false; start = 0;
-                    currentQId = data.question.id;
-                    correctAns = data.question.correct_answer;
+                    if(lastIdx !== data.current_q_index) {
+                        lastIdx = data.current_q_index; answered = false; start = 0;
+                        correct = data.question.correct_answer;
+                    }
                     document.getElementById('grid').classList.add('hidden');
                     document.getElementById('msg').innerText = "CONCENTREZ-VOUS...";
                 } else if (data.status === 'playing' && !answered) {
@@ -39,9 +40,6 @@
                 } else if (data.status === 'leaderboard') {
                     document.getElementById('grid').classList.add('hidden');
                     document.getElementById('msg').innerText = "REGARDEZ LE MAÎTRE !";
-                } else if (data.status === 'finished') {
-                    document.getElementById('msg').innerText = "PARTIE TERMINÉE !";
-                    setTimeout(() => window.location.href = "index.php", 5000);
                 }
             });
         }
@@ -53,10 +51,10 @@
             fetch(`api_live.php?action=submit_answer&pin=${pin}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nickname: nick, is_correct: (num == correctAns), response_time: time, answer_index: num })
+                body: JSON.stringify({ nickname: nick, is_correct: (num == correct), response_time: time, answer_index: num })
             });
             document.getElementById('grid').classList.add('hidden');
-            document.getElementById('msg').innerText = "RÉPONSE ENVOYÉE !";
+            document.getElementById('msg').innerText = "ENVOYÉ !";
         }
         setInterval(sync, 1500);
     </script>
