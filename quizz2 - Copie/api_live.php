@@ -9,7 +9,7 @@ $gameStateFile = "sessions/game_" . $pin . ".json";
 if (file_exists($gameStateFile)) {
     $state = json_decode(file_get_contents($gameStateFile), true);
 } else {
-    $state = ['players' => [], 'scores' => [], 'answers' => [], 'status' => 'lobby', 'current_q_index' => -1, 'last_update' => time()];
+    $state = ['players' => [], 'scores' => [], 'answers' => [], 'status' => 'lobby', 'current_q_index' => -1];
 }
 
 switch ($action) {
@@ -25,7 +25,6 @@ switch ($action) {
                 'is_member' => (bool)($input['is_member'] ?? false)
             ];
             $state['scores'][$nick] = 0;
-            $state['last_update'] = time();
         }
         break;
 
@@ -39,17 +38,30 @@ switch ($action) {
         $state['current_q_index'] = 0;
         $state['question'] = $qs[0];
         $state['answers'] = array_fill(0, count($qs), []);
-        $state['last_update'] = time();
         break;
 
     case 'activate_playing':
         $state['status'] = 'playing';
-        $state['last_update'] = time();
+        break;
+
+    case 'submit_answer':
+        $input = json_decode(file_get_contents('php://input'), true);
+        $nick = $input['nickname'];
+        $qIdx = (int)$state['current_q_index'];
+        // On initialise le tableau de réponses pour cette question si besoin
+        if (!isset($state['answers'][$qIdx])) { $state['answers'][$qIdx] = []; }
+        
+        if (!isset($state['answers'][$qIdx][$nick])) {
+            $state['answers'][$qIdx][$nick] = $input['answer_index'];
+            if ($input['is_correct'] == true) {
+                $pts = max(500, 1000 - (int)($input['response_time'] * 50));
+                $state['scores'][$nick] += $pts;
+            }
+        }
         break;
 
     case 'show_leaderboard':
         $state['status'] = 'leaderboard';
-        $state['last_update'] = time();
         break;
 
     case 'next_step':
@@ -60,7 +72,6 @@ switch ($action) {
         } else {
             $state['status'] = 'finished';
         }
-        $state['last_update'] = time();
         break;
 
     case 'get_state':
