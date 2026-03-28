@@ -21,6 +21,7 @@ switch ($action) {
         if (!isset($state['scores'][$nick])) {
             $state['players'][] = ['nickname' => $nick, 'hair' => (int)($input['hair'] ?? 1), 'outfit' => (int)($input['outfit'] ?? 1)];
             $state['scores'][$nick] = 0;
+            file_put_contents($gameStateFile, json_encode($state));
         }
         break;
 
@@ -38,6 +39,7 @@ switch ($action) {
         $state['current_q_index'] = 0;
         $state['question'] = $qs[0];
         $state['answers'] = array_fill(0, count($qs), []);
+        file_put_contents($gameStateFile, json_encode($state));
         break;
 
     case 'submit_answer':
@@ -50,11 +52,13 @@ switch ($action) {
                 $pts = max(500, 1000 - (int)($input['response_time'] * 50));
                 $state['scores'][$nick] += $pts;
             }
+            file_put_contents($gameStateFile, json_encode($state));
         }
         break;
 
     case 'show_leaderboard':
         $state['status'] = 'leaderboard';
+        file_put_contents($gameStateFile, json_encode($state));
         break;
 
     case 'next_step':
@@ -62,13 +66,10 @@ switch ($action) {
         if ($state['current_q_index'] < count($state['questions_list'])) {
             $state['status'] = 'playing';
             $state['question'] = $state['questions_list'][$state['current_q_index']];
-            // On s'assure que le temps est mis à jour pour forcer la synchro
-            $state['last_update'] = time();
         } else {
             $state['status'] = 'finished';
         }
+        file_put_contents($gameStateFile, json_encode($state));
         break;
 }
-
-file_put_contents($gameStateFile, json_encode($state));
 echo json_encode(['status' => 'success']);

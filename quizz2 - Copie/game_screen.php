@@ -17,7 +17,7 @@
     </div>
 
     <div id="finish-area" class="hidden flex-grow flex flex-col items-center justify-center p-10 text-center">
-        <h2 class="text-5xl font-black mb-10 italic">FINI !</h2>
+        <h2 class="text-5xl font-black mb-10 italic uppercase">C'est la fin !</h2>
         <a href="index.php" class="bg-white text-indigo-900 px-12 py-4 rounded-full font-black text-2xl shadow-2xl">RETOUR</a>
     </div>
 
@@ -26,17 +26,24 @@
         const nick = localStorage.getItem('quiz_nickname');
         document.getElementById('status-bar').innerText = nick;
 
-        let lastQId = null; let answered = false; let startTime = 0;
+        let lastQId = null; 
+        let currentCorrectAns = 1;
+        let answered = false; 
+        let startTime = 0;
 
         function sync() {
             fetch(`api_live.php?action=get_state&pin=${pin}`).then(r => r.json()).then(data => {
                 if (data.status === 'playing') {
-                    // Si c'est une nouvelle question
+                    // Si on détecte une nouvelle question par son texte ou son ID
                     if (lastQId !== data.question.id) {
                         lastQId = data.question.id;
+                        currentCorrectAns = data.question.correct_answer;
                         answered = false;
                         document.getElementById('grid').classList.add('hidden');
+                        document.getElementById('finish-area').classList.add('hidden');
+                        document.getElementById('msg').classList.remove('hidden');
                         document.getElementById('msg').innerText = "Préparez-vous...";
+                        
                         setTimeout(() => {
                             document.getElementById('grid').classList.remove('hidden');
                             document.getElementById('msg').innerText = "VITE !";
@@ -44,7 +51,7 @@
                         }, 2000);
                     }
                 } else if (data.status === 'leaderboard') {
-                    lastQId = null; // On force le reset du cache
+                    lastQId = null; // On réinitialise pour la prochaine question
                     document.getElementById('grid').classList.add('hidden');
                     document.getElementById('msg').innerText = "Regardez le Maître !";
                 } else if (data.status === 'finished') {
@@ -58,37 +65,18 @@
         function submitAnswer(num) {
             if (answered) return;
             answered = true;
-            const time = (Date.now() - startTime) / 1000;
-            const correct = (num == lastQId); // On peut simplifier la vérification côté serveur
-            
-            // On récupère l'info de correction directement de l'état local ou on l'envoie pour calcul
+            const responseTime = (Date.now() - startTime) / 1000;
+            const isCorrect = (num == currentCorrectAns);
+
             fetch(`api_live.php?action=submit_answer&pin=${pin}`, {
                 method: 'POST',
-                body: JSON.stringify({ nickname: nick, is_correct: (num == data_cache_question_correct), response_time: time, answer_index: num })
+                body: JSON.stringify({ nickname: nick, is_correct: isCorrect, response_time: responseTime, answer_index: num })
             });
-            // Pour Bernard Quizz, on envoie juste la réponse, api_live fera le calcul
-            document.getElementById('grid').classList.add('hidden');
-            document.getElementById('msg').innerText = "Réponse envoyée !";
-        }
-        
-        // Petite correction sur submitAnswer pour être sur de la réponse correcte
-        function submitAnswer(num) {
-            if (answered) return;
-            answered = true;
-            const time = (Date.now() - startTime) / 1000;
-            
-            // On a besoin de savoir si c'est bon. On va le chercher dans l'objet question reçu.
-            fetch(`api_live.php?action=get_state&pin=${pin}`).then(r => r.json()).then(data => {
-                const correct = (num == data.question.correct_answer);
-                fetch(`api_live.php?action=submit_answer&pin=${pin}`, {
-                    method: 'POST',
-                    body: JSON.stringify({ nickname: nick, is_correct: correct, response_time: time, answer_index: num })
-                });
-                document.getElementById('msg').innerText = time < 3 ? "Rapide ! Ta copine doit être triste..." : "T'es lent, on dirait un papi...";
-            });
-            document.getElementById('grid').classList.add('hidden');
-        }
 
+            document.getElementById('grid').classList.add('hidden');
+            const funnyPhrases = ["Rapide ! Ta copine doit être triste...", "T'es lent, on dirait un papi...", "Flash McQueen !", "Calme-toi l'excité."];
+            document.getElementById('msg').innerText = funnyPhrases[Math.floor(Math.random()*funnyPhrases.length)];
+        }
         setInterval(sync, 1500);
     </script>
 </body>
