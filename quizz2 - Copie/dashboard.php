@@ -20,24 +20,36 @@ if (!isset($_SESSION['user_id'])) { header("Location: index.php"); exit; }
     </nav>
 
     <div class="max-w-6xl mx-auto py-12 px-6">
-        <h2 class="text-3xl font-bold mb-8 text-gray-800">Bonjour, <?= htmlspecialchars($_SESSION['username']) ?> !</h2>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <?php if(hasRole('createur')): ?>
-            <a href="manage_quizzes.php" class="bg-white p-8 rounded-3xl shadow-sm border-b-4 border-indigo-500 hover:scale-105 transition">
-                <div class="text-4xl mb-4">📚</div>
-                <h3 class="font-black text-xl mb-2">MES QUIZ</h3>
-                <p class="text-gray-500 text-sm">Créez et gérez vos propres sessions de jeu.</p>
-            </a>
-            <?php endif; ?>
+        <div class="flex flex-col md:flex-row justify-between items-start gap-8">
+            <div class="w-full md:w-2/3">
+                <h2 class="text-3xl font-bold mb-8 text-gray-800 tracking-tighter">Bonjour, <?= htmlspecialchars($_SESSION['username']) ?> !</h2>
+                
+                <div class="bg-white p-8 rounded-3xl shadow-xl border-t-8 border-yellow-400 mb-10">
+                    <h3 class="font-black text-xl mb-4">REJOINDRE UNE PARTIE</h3>
+                    <form action="lobby.php" method="GET" class="flex gap-2">
+                        <input type="text" name="pin" placeholder="CODE PIN (ex: 123456)" class="flex-grow p-4 border-2 rounded-2xl font-black text-2xl tracking-widest outline-none focus:border-indigo-500 text-center">
+                        <button type="submit" class="bg-indigo-600 text-white px-8 rounded-2xl font-black hover:bg-indigo-700 transition">GO !</button>
+                    </form>
+                </div>
 
-            <?php if(hasRole('admin')): ?>
-            <a href="admin_users.php" class="bg-white p-8 rounded-3xl shadow-sm border-b-4 border-red-500 hover:scale-105 transition">
-                <div class="text-4xl mb-4">🛠️</div>
-                <h3 class="font-black text-xl mb-2">PANEL ADMIN</h3>
-                <p class="text-gray-500 text-sm">Gérez les utilisateurs et les rangs du site.</p>
-            </a>
-            <?php endif; ?>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <?php if(hasRole('createur')): ?>
+                    <a href="manage_quizzes.php" class="bg-white p-8 rounded-3xl shadow-sm border-b-4 border-indigo-500 hover:scale-105 transition">
+                        <div class="text-4xl mb-4">📚</div>
+                        <h3 class="font-black text-xl mb-2">MES QUIZ</h3>
+                        <p class="text-gray-500 text-sm">Créez et gérez vos propres sessions de jeu.</p>
+                    </a>
+                    <?php endif; ?>
+
+                    <?php if(hasRole('admin')): ?>
+                    <a href="admin_users.php" class="bg-white p-8 rounded-3xl shadow-sm border-b-4 border-red-500 hover:scale-105 transition">
+                        <div class="text-4xl mb-4">🛠️</div>
+                        <h3 class="font-black text-xl mb-2">PANEL ADMIN</h3>
+                        <p class="text-gray-500 text-sm">Gérez les utilisateurs et les rangs.</p>
+                    </a>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
     </div>
 </body>
