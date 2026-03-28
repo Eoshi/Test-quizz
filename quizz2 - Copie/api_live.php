@@ -6,10 +6,13 @@ $action = $_GET['action'] ?? '';
 $pin = $_GET['pin'] ?? '';
 $gameStateFile = "sessions/game_" . $pin . ".json";
 
+// Création du dossier si inexistant
+if (!is_dir('sessions')) { mkdir('sessions', 0755, true); }
+
 if (file_exists($gameStateFile)) {
     $state = json_decode(file_get_contents($gameStateFile), true);
 } else {
-    $state = ['players' => [], 'scores' => [], 'answers' => [], 'status' => 'lobby', 'current_q_index' => -1];
+    $state = ['players' => [], 'scores' => [], 'answers' => [], 'status' => 'lobby', 'current_q_index' => -1, 'last_update' => time()];
 }
 
 switch ($action) {
@@ -33,11 +36,15 @@ switch ($action) {
         $stmt = $pdo->prepare("SELECT * FROM questions WHERE quiz_id = ? ORDER BY id ASC");
         $stmt->execute([$quiz_id]);
         $qs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
         $state['status'] = 'reveal';
         $state['questions_list'] = $qs;
         $state['current_q_index'] = 0;
         $state['question'] = $qs[0];
-        $state['answers'] = array_fill(0, count($qs), new stdClass());
+        
+        // On prépare un objet vide pour chaque question pour éviter les bugs JS
+        $state['answers'] = [];
+        foreach ($qs as $k => $v) { $state['answers'][$k] = new stdClass(); }
         break;
 
     case 'activate_playing':
@@ -46,20 +53,25 @@ switch ($action) {
 
     case 'submit_answer':
         $input = json_decode(file_get_contents('php://input'), true);
-        $nick = $input['nickname'];
+        $nick = $input['nickname'] ?? '';
         $qIdx = (int)$state['current_q_index'];
-        
-        // On s'assure que answers[qIdx] est un tableau associatif
-        if (!isset($state['answers'][$qIdx])) { $state['answers'][$qIdx] = []; }
-        $currentAnswers = (array)$state['answers'][$qIdx];
 
-        if (!isset($currentAnswers[$nick])) {
-            $currentAnswers[$nick] = $input['answer_index'];
-            $state['answers'][$qIdx] = $currentAnswers;
+        if ($nick && $qIdx >= 0) {
+            if (!isset($state['answers'][$qIdx])) { $state['answers'][$qIdx] = []; }
+            $currentAnswers = (array)$state['answers'][$qIdx];
 
-            if ($input['is_correct'] == true) {
-                $pts = max(500, 1000 - (int)($input['response_time'] * 50));
-                $state['scores'][$nick] += $pts;
+            // Si le joueur n'a pas encore répondu à cette question
+            if (!isset($currentAnswers[$nick])) {
+                $currentAnswers[$nick] = $input['answer_index'];
+                $state['answers'][$qIdx] = $currentAnswers;
+
+                // Forcer la lecture en Booléen (Vrai/Faux)
+                $isCorrect = filter_var($input['is_correct'], FILTER_VALIDATE_BOOLEAN);
+                if ($isCorrect) {
+                    $timeTaken = (float)($input['response_time'] ?? 0);
+                    $pts = max(500, 1000 - (int)($timeTaken * 50));
+                    $state['scores'][$nick] += $pts;
+                }
             }
         }
         break;
@@ -83,5 +95,7 @@ switch ($action) {
         exit;
 }
 
+// Mise à jour du timestamp pour forcer le rafraîchissement des écrans
+$state['last_update'] = time();
 file_put_contents($gameStateFile, json_encode($state));
 echo json_encode(['status' => 'success']);
